@@ -139,10 +139,19 @@ export default function Dashboard() {
       }
 
       try {
+        // Extract previous messages for context (exclude loading placeholders)
+        const chatHistory = currentMessages
+          .filter(m => !m.id.startsWith("loading-"))
+          .map(m => ({ role: m.role, content: m.content }));
+
         const res = await fetch("/api/query", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: queryText, namespace: namespace }),
+            body: JSON.stringify({ 
+              question: queryText, 
+              namespace: namespace,
+              chatHistory: chatHistory,
+            }),
         });
         
         if (!res.ok) {

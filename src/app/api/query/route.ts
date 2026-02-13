@@ -20,7 +20,20 @@ export async function POST(req: Request) {
     rateLimit.set(ip, currentCount + 1);
 
     // Validate input
-    const { question, namespace }: { question: string; namespace: string } = await req.json();
+    let requestData: any;
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      console.error("Invalid JSON in request:", e);
+      return Response.json({ success: false, message: "Invalid JSON format." }, { status: 400 });
+    }
+
+    const { 
+      question, 
+      namespace,
+      chatHistory,
+    } = requestData;
+    
     if (!question || typeof question !== "string" || question.length > 500) {
       return Response.json({ success: false, message: "Invalid question." }, { status: 400 });
     }
@@ -28,11 +41,20 @@ export async function POST(req: Request) {
       return Response.json({ success: false, message: "Invalid namespace." }, { status: 400 });
     }
 
-    // Process query
-    const answer = await queryDocs(question, namespace);
+    // Ensure chatHistory is valid
+    let validChatHistory: Array<{ role: string; content: string }> | undefined;
+    if (chatHistory && Array.isArray(chatHistory)) {
+      validChatHistory = chatHistory;
+    }
+
+    console.log(`📨 Query received - namespace: ${namespace}, question length: ${question.length}, history: ${validChatHistory?.length ?? 0} messages`);
+
+    // Process query with chat history
+    const answer = await queryDocs(question, namespace, validChatHistory);
     return Response.json({ success: true, answer });
   } catch (error) {
     console.error("Error in query API:", error);
-    return Response.json({ success: false, message: "Internal server error." }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return Response.json({ success: false, message: errorMessage }, { status: 500 });
   }
 }

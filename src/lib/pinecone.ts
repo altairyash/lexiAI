@@ -20,28 +20,31 @@ interface Vector {
  */
 async function createOrGetIndex(): Promise<Index> {
   try {
-    console.log(`Checking index: ${indexName}`);
-    await pinecone.createIndex({
-      name: indexName,
-      dimension: 1536, // Must match OpenAI embedding dimensions
-      metric: "cosine",
-      spec: {
-        serverless: {
-          cloud: "aws",
-          region: process.env.PINECONE_ENVIRONMENT || "us-east-1",
+    const existingIndexes = await pinecone.listIndexes();
+    const indexExists = existingIndexes.indexes?.some(idx => idx.name === indexName);
+
+    if (!indexExists) {
+      console.log(`Index "${indexName}" not found. Creating...`);
+      await pinecone.createIndex({
+        name: indexName,
+        dimension: 1536,
+        metric: "cosine",
+        spec: {
+          serverless: {
+            cloud: "aws",
+            region: process.env.PINECONE_ENVIRONMENT || "us-east-1",
+          },
         },
-      },
-    });
-    console.log(`Index "${indexName}" created successfully.`);
-  } catch (error: unknown) {
-    if (error instanceof Error && error.message.includes("ALREADY_EXISTS")) {
-      console.log(`Index "${indexName}" already exists.`);
-    } else {
-      console.error("Error creating index:", error);
-      throw error;
+      });
+      console.log("Waiting for index initialization...");
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Simple wait for eventual consistency
     }
+    
+    return pinecone.Index(indexName);
+  } catch (error) {
+    console.error("Error managing Pinecone index:", error);
+    throw error;
   }
-  return pinecone.Index(indexName);
 }
 
 /**

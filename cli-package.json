@@ -1,0 +1,40 @@
+{
+  "name": "lexi-ai",
+  "version": "1.0.1",
+  "description": "AI-powered GitHub documentation indexing CLI tool",
+  "main": "index.js",
+  "bin": {
+    "lexi-ai": "./index.js"
+  },
+  "keywords": [
+    "ai",
+    "documentation",
+    "github",
+    "indexing",
+    "cli",
+    "vector-search",
+    "pinecone",
+    "openai"
+  ],
+  "author": "Yash",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/altairyash/lexiAI.git"
+  },
+  "dependencies": {
+    "axios": "^1.8.3",
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "ora": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "readme": "README.md"
+}
+

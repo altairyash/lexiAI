@@ -1,18 +1,18 @@
-import "../globals.css";
-export const metadata = {
-  title: 'LexiAI',
-  description: 'Open-Sourced AI Documentation Search Engine',
-  image: '/logo.png',
-}
+import type { Metadata } from "next";
 
-export default function RootLayout({
+export const metadata: Metadata = {
+  title: "Dashboard | LexiAI",
+  description: "Experience the power of AI-driven documentation search.",
+};
+
+export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
+    <main className="min-h-screen w-full bg-neutral-950 antialiased selection:bg-emerald-500/30">
+      {children}
+    </main>
+  );
 }

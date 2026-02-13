@@ -19,7 +19,7 @@ export function AnimatedBorder({
   children,
   className,
   containerClassName,
-  borderColor = "from-black via-purple-500 to-black",
+  borderColor = "from-black via-emerald-500 to-black",
   background = "bg-black",
 }: AnimatedBorderProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 })

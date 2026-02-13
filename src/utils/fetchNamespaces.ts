@@ -1,10 +1,13 @@
+import { Namespace } from "@/types";
+
 export async function fetchNamespaces(
-    setNamespaces: (namespaces: { value: string; label: string }[]) => void,
+    setNamespaces: (namespaces: Namespace[]) => void,
     setIsNamespacesLoading: (loading: boolean) => void,
     toast: { error: (message: string) => void }
   ) {
     try {
       const res = await fetch("/api/namespaces");
+      if (!res.ok) throw new Error("Failed network request");
       const data = await res.json();
       setNamespaces(
         data.namespaces
@@ -13,7 +16,7 @@ export async function fetchNamespaces(
       );
     } catch (error) {
       toast.error("Error fetching namespaces");
-      console.error(error);
+      console.error("fetchNamespaces error:", error);
     } finally {
       setIsNamespacesLoading(false);
     }
@@ -45,7 +48,7 @@ export async function fetchNamespaces(
       return;
     }
   
-    const cacheKey = `${selectedNamespace}-${question}`;
+    const cacheKey = `${selectedNamespace}-${question.trim().toLowerCase()}`;
     if (cache[cacheKey]) {
       setAnswer(cache[cacheKey]);
       return;
@@ -53,17 +56,23 @@ export async function fetchNamespaces(
   
     setIsLoading(true);
     try {
+      // Normalize question for better cache hits
+      const normalizedQuestion = question.trim();
+
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, namespace: selectedNamespace }),
+        body: JSON.stringify({ question: normalizedQuestion, namespace: selectedNamespace }),
       });
+      
+      if (!res.ok) throw new Error("Query failed");
+
       const data = await res.json();
       setAnswer(data.answer);
       setCache((prevCache: { [key: string]: string }) => ({ ...prevCache, [cacheKey]: data.answer as string }));
     } catch (error) {
-      toast.error("Failed to fetch answer.");
-      console.error(error);
+      toast.error("Failed to fetch answer. Please try again.");
+      console.error("handleQuery error:", error);
     } finally {
       setIsLoading(false);
     }

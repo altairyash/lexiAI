@@ -1,0 +1,58 @@
+# Exclude Next.js app files
+src/
+public/
+.next/
+out/
+*.config.ts
+*.config.js
+*.config.mjs
+postcss.config.*
+tailwind.config.*
+tsconfig.json
+next-env.d.ts
+components.json
+
+# Exclude app-specific files
+.eslintrc*
+eslint.config.*
+README.md
+CLI_SETUP.md
+
+# Exclude development files
+.git/
+.gitignore
+.env*
+.vercel/
+
+# Exclude React/Next.js dependencies (CLI doesn't need them)
+node_modules/@ark-ui/
+node_modules/@chakra-ui/
+node_modules/@emotion/
+node_modules/@heroicons/
+node_modules/@radix-ui/
+node_modules/@shadcn/
+node_modules/@tabler/
+node_modules/framer-motion/
+node_modules/gsap/
+node_modules/lucide-react/
+node_modules/next/
+node_modules/react/
+node_modules/react-dom/
+node_modules/react-markdown/
+node_modules/react-select/
+node_modules/react-simple-typewriter/
+node_modules/react-syntax-highlighter/
+node_modules/react-toastify/
+node_modules/remark/
+node_modules/remark-gfm/
+node_modules/strip-markdown/
+node_modules/tailwind-merge/
+node_modules/tailwindcss-animate/
+node_modules/next-themes/
+node_modules/class-variance-authority/
+node_modules/clsx/
+
+# Keep only CLI essentials
+!cli/
+!package.json
+

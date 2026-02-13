@@ -5,8 +5,6 @@ import strip from "strip-markdown";
 
 const cache = new Map<string, string>();
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Ensure you set this in your environment variables
-
 
 export async function fetchMarkdownFile(url: string): Promise<string | null> {
   if (cache.has(url)) return cache.get(url) || null;
@@ -33,7 +31,8 @@ async function fetchGitHubDocsRecursively(
   owner: string,
   repo: string,
   branch: string,
-  path: string = ""
+  path: string = "",
+  githubToken?: string
 ): Promise<string> {
   const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
 
@@ -44,7 +43,7 @@ async function fetchGitHubDocsRecursively(
     response = await got(apiUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
-        Authorization: GITHUB_TOKEN ? `token ${GITHUB_TOKEN}` : undefined,
+        Authorization: githubToken ? `token ${githubToken}` : undefined,
       },
     }).json();
   } catch (error) {
@@ -81,14 +80,14 @@ async function fetchGitHubDocsRecursively(
       }
     } else if (item.type === "dir") {
       console.log(`📂 Entering subdirectory: ${item.path}`);
-      allDocs += await fetchGitHubDocsRecursively(owner, repo, branch, item.path);
+      allDocs += await fetchGitHubDocsRecursively(owner, repo, branch, item.path, githubToken);
     }
   }
 
   return allDocs;
 }
 
-export async function fetchGitHubDocs(githubUrl: string): Promise<string | null> {
+export async function fetchGitHubDocs(githubUrl: string, githubToken?: string): Promise<string | null> {
   try {
     if (!githubUrl) throw new Error("GitHub URL is undefined or empty");
     console.log("Processing GitHub URL:", githubUrl);
@@ -101,10 +100,11 @@ export async function fetchGitHubDocs(githubUrl: string): Promise<string | null>
 
     if (!branchFromUrl) {
       console.log("Fetching default branch...");
+      const token = githubToken || process.env.GITHUB_TOKEN;
       const repoInfo = await got(`https://api.github.com/repos/${owner}/${repo}`, {
         headers: {
           "User-Agent": "Mozilla/5.0",
-          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Authorization: token ? `token ${token}` : undefined,
         },
       }).json();
       branch = (repoInfo as { default_branch: string }).default_branch || "main";
@@ -112,7 +112,7 @@ export async function fetchGitHubDocs(githubUrl: string): Promise<string | null>
     }
 
     console.log("Extracted GitHub Info:", { owner, repo, branch, path: rawPath || "root" });
-    return await fetchGitHubDocsRecursively(owner, repo, branch, rawPath || "");
+    return await fetchGitHubDocsRecursively(owner, repo, branch, rawPath || "", githubToken);
   } catch (error) {
     console.error("Error fetching GitHub docs:", error);
     return null;

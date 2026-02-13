@@ -4,18 +4,18 @@ import { storeDocs } from "@/lib/pinecone";
 export async function POST(req: Request) {
   try {
       const body = await req.json();
-      console.log("Received body:", body); 
-
-      const { url, namespace } = body;
+      const { url, namespace, githubToken } = body;
 
       if (!url) {
           return Response.json({ success: false, message: "Missing URL" }, { status: 400 });
       }
 
-      const text: string | null = await fetchGitHubDocs(url); 
+      // Use provided token or fall back to environment variable
+      const token = githubToken || process.env.GITHUB_TOKEN;
+      const text: string | null = await fetchGitHubDocs(url, token); 
       
       if (text !== null) {
-          await storeDocs(url, text, namespace);
+          await storeDocs(url, text, namespace || "default");
           return Response.json({ success: true, message: "Docs scraped and stored." });
       }
 

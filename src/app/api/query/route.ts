@@ -42,9 +42,12 @@ export async function POST(req: Request) {
     }
 
     // Ensure chatHistory is valid
-    let validChatHistory: Array<{ role: string; content: string }> | undefined;
+    let validChatHistory: Array<{ role: "user" | "assistant"; content: string }> | undefined;
     if (chatHistory && Array.isArray(chatHistory)) {
-      validChatHistory = chatHistory;
+      validChatHistory = chatHistory.map(m => ({
+        role: (m.role === "user" || m.role === "assistant") ? m.role : "user",
+        content: m.content
+      })) as Array<{ role: "user" | "assistant"; content: string }>;
     }
 
     console.log(`📨 Query received - namespace: ${namespace}, question length: ${question.length}, history: ${validChatHistory?.length ?? 0} messages`);

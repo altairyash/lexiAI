@@ -2,9 +2,6 @@
 import React from "react";
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import {
-  IconArrowWaveRightUp,
-  IconBoxAlignRightFilled,
-  IconBoxMarked,
   IconClipboardCopy,
   IconFileBroken,
   IconSignature,

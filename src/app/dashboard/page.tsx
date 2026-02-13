@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Menu, X, Command, Search, Sparkles } from "lucide-react";
+import { Menu, X, Sparkles } from "lucide-react";
 
 import NamespaceSelector from "@/components/dashboard/namespace-selector";
 import Answer from "@/components/dashboard/answer";
@@ -43,7 +43,6 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [cache, setCache] = useState<{ [key: string]: string }>({});
 
-  const sidebarRef = useRef(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load initial state
@@ -368,6 +367,7 @@ export default function Dashboard() {
                                 "flex w-full",
                                 msg.role === "user" ? "justify-end" : "justify-start"
                             )}
+                            id={idx.toString()}
                         >
                             {msg.role === "user" ? (
                                 <motion.div 
@@ -426,7 +426,7 @@ export default function Dashboard() {
                             "Explain the architecture...",
                         ]}
                         onChange={(e) => setInput(e.target.value)}
-                        onSubmit={(e) => onSubmit()}
+                        onSubmit={() => onSubmit()}
                         value={input}
                         disabled={!selectedNamespace}
                     />

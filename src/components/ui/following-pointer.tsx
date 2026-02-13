@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, MotionValue } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 
 export const FollowerPointerCard = ({
   children,

@@ -4,14 +4,13 @@ import { useRouter } from "next/navigation";
 import { FloatingNav } from "@/components/ui/floating-navbar";
 import { Spotlight } from "@/components/ui/spotlight";
 import { BackgroundBeams } from "@/components/ui/background-beams";
-import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { MovingBorderBtn } from "@/components/ui/moving-border";
 import { Features } from "@/components/dashboard/features";
 import { Footer } from "@/components/dashboard/footer";
 import { motion } from "framer-motion";
 import LoaderSVG from "@/custom-components/ui/loader-svg";
 import { Typewriter } from "react-simple-typewriter";
-import { HomeIcon, Book, Search, User, Github, ArrowRight, Sparkles } from "lucide-react";
+import { HomeIcon, Book, Search, Github } from "lucide-react";
 
 import { PlaceholdersAndVanishInput } from "@/components/ui/vanish-input";
 

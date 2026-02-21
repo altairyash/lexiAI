@@ -87,17 +87,22 @@ export async function storeDocs(
   const space = index.namespace(namespace);
 
   const chunks = chunkText(text, 3000);
-  console.log(`🚀 Storing ${chunks.length} optimized chunks (approx. 3000 chars each)...`);
+  console.log(`\n📊 Preparing ${chunks.length} chunks for embedding`);
+  console.log(`{"type": "embedding", "message": "Starting embeddings..."}`);
 
   const limit = pLimit(2); // Concurrency control
+  let completedEmbeddings = 0;
+
   const embeddingTasks = chunks.map((chunk, i) =>
     limit(async (): Promise<Vector | null> => {
-      console.log(`Embedding chunk ${i + 1}/${chunks.length}`);
       try {
         const response = await openai.embeddings.create({
           input: chunk,
           model: "text-embedding-3-small",
         });
+
+        completedEmbeddings++;
+        console.log(`{"type": "embedding_progress", "count": ${completedEmbeddings}, "total": ${chunks.length}}`);
 
         return {
           id: `${url}-${i}-${Math.random().toString(36).substring(2, 10)}`,
@@ -105,7 +110,7 @@ export async function storeDocs(
           metadata: { url, text: chunk },
         };
       } catch (error) {
-        console.error(`❌ Error embedding chunk ${i + 1}:`, error);
+        console.error(`Failed embedding chunk ${i + 1}:`, error);
         return null;
       }
     })
@@ -114,19 +119,23 @@ export async function storeDocs(
   const vectors: Vector[] = (await Promise.all(embeddingTasks)).filter(
     (v): v is Vector => v !== null
   );
-  console.log(`✅ Successfully generated ${vectors.length} embeddings.`);
+  console.log(`✓ Generated ${vectors.length} embeddings`);
 
   // Adaptive batch size to fit under 4MB
   let batch: Vector[] = [];
   let batchSize = 0;
+  let batchCount = 0;
   const MAX_PAYLOAD_SIZE = 4194304; // 4MB limit
+
+  console.log(`{"type": "uploading", "message": "Uploading to vector database..."}`);
 
   for (let i = 0; i < vectors.length; i++) {
     const vectorSize = estimateByteSize([vectors[i]]);
 
     if (batchSize + vectorSize > MAX_PAYLOAD_SIZE) {
       // Upsert current batch before adding new item
-      console.log(`📤 Upserting batch (${batch.length} vectors, ~${batchSize} bytes)`);
+      batchCount++;
+      console.log(`📤 Batch ${batchCount}: ${batch.length} vectors`);
       await space.upsert(batch);
       batch = [];
       batchSize = 0;
@@ -138,10 +147,11 @@ export async function storeDocs(
 
   // Upsert final batch if not empty
   if (batch.length > 0) {
-    console.log(`📤 Upserting final batch (${batch.length} vectors, ~${batchSize} bytes)`);
+    batchCount++;
+    console.log(`📤 Batch ${batchCount}: ${batch.length} vectors`);
     await space.upsert(batch);
   }
 
-  console.log(`✅ Successfully stored ${vectors.length} embeddings in Pinecone.`);
+  console.log(`✓ Stored ${vectors.length} vectors in Pinecone`);
   return { success: true, message: "Docs stored successfully." };
 }

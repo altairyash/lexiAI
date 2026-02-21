@@ -71,7 +71,7 @@ export default function Home() {
       <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden pt-20 md:pt-0">
         <Spotlight className="-top-40 left-0 md:-top-20 md:left-60" fill="white" />
         
-        <div className="relative pt-40 pb-20 z-10 w-full max-w-6xl mx-auto px-4 md:px-6 flex flex-col items-center justify-center text-center">
+        <div className="relative pt-20 md:pt-40 pb-20 z-10 w-full max-w-6xl mx-auto px-4 md:px-6 flex flex-col items-center justify-center text-center">
           
           <motion.div
             initial={{ opacity: 0, y: 20 }}

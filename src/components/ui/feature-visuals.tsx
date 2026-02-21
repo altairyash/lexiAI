@@ -25,9 +25,9 @@ export const MockTerminal = () => (
             <span className="w-2 h-2 rounded-full bg-green-500"/>
         </div>
         <div>
-            <span className="text-blue-400">➜</span> <span className="text-white">~</span> npx lexi-ai index --url https://react.dev<br/>
-            <span className="opacity-50">Indexing React Documentation...</span><br/>
-            <span className="text-green-500">✓ Done in 1.2s</span>
+            <span className="text-blue-400">➜</span> <span className="text-white">~</span> npx lexi-ai-docs scrape https://github.com/facebook/react --token ghp_xxx<br/>
+            <span className="opacity-50">Scraping and indexing documentation...</span><br/>
+            <span className="text-green-500">✓ Documentation indexed successfully!</span>
         </div>
     </div>
 );

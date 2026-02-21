@@ -5,7 +5,6 @@ import strip from "strip-markdown";
 
 const cache = new Map<string, string>();
 
-
 export async function fetchMarkdownFile(url: string): Promise<string | null> {
   if (cache.has(url)) return cache.get(url) || null;
 
@@ -13,7 +12,6 @@ export async function fetchMarkdownFile(url: string): Promise<string | null> {
     const { body } = await got(url, { headers: { "User-Agent": "your-app" } });
     const content = body.toString();
 
-    // Convert Markdown to plain text
     const { content: markdownText } = matter(content);
     const processed = await remark().use(strip).process(markdownText);
     const textContent = processed.toString().trim();

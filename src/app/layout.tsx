@@ -1,10 +1,18 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google"; // New imports
+import { Inter, Outfit } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" });
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-sans",
+  weight: ["400", "500", "600"],
+});
+const outfit = Outfit({ 
+  subsets: ["latin"], 
+  variable: "--font-display",
+  weight: ["400", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "LexiAI",
@@ -24,7 +32,7 @@ export default function RootLayout({
       <body className={cn(
           "min-h-screen bg-background font-sans antialiased",
           inter.variable,
-          playfair.variable
+          outfit.variable
         )}>
         {children}
       </body>

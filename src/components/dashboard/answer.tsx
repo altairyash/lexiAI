@@ -20,7 +20,6 @@ const Answer: React.FC<AnswerProps> = ({ answer, isLoading }) => {
     setTimeout(() => setCopiedCode(null), 3000);
   };
 
-  // Don't render if there's no content and not loading
   if (!isLoading && !answer) {
     return null;
   }
@@ -36,7 +35,6 @@ const Answer: React.FC<AnswerProps> = ({ answer, isLoading }) => {
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              // Override pre to remove default styling as we handle it in code
               pre: ({ children }) => <div className="not-prose my-4">{children}</div>,
               code: ({
                 inline = false,
@@ -55,7 +53,6 @@ const Answer: React.FC<AnswerProps> = ({ answer, isLoading }) => {
 
                 return !inline && match ? (
                   <div className="rounded-xl overflow-x-auto bg-neutral-900 border border-neutral-800 shadow-2xl my-6 w-full max-w-full">
-                    {/* Code Header */}
                     <div className="flex items-center justify-between px-4 py-2 bg-neutral-800/50 border-b border-neutral-800">
                       <div className="flex items-center gap-2">
                          <div className="flex gap-1.5">
@@ -76,7 +73,6 @@ const Answer: React.FC<AnswerProps> = ({ answer, isLoading }) => {
                         )}
                       </button>
                     </div>
-                    {/* Syntax Highlighter */}
                     <SyntaxHighlighter
                       style={oneDark}
                       language={language}
@@ -109,7 +105,6 @@ const Answer: React.FC<AnswerProps> = ({ answer, isLoading }) => {
                   </code>
                 );
               },
-              // Style other elements
               h1: ({children}) => <h1 className="text-3xl font-bold text-white mb-6 mt-8 pb-2 border-b border-neutral-800">{children}</h1>,
               h2: ({children}) => <h2 className="text-2xl font-bold text-white mb-4 mt-8">{children}</h2>,
               h3: ({children}) => <h3 className="text-xl font-semibold text-white mb-3 mt-6">{children}</h3>,

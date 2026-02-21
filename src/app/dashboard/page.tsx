@@ -41,7 +41,6 @@ export default function Dashboard() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [cache, setCache] = useState<{ [key: string]: string }>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,11 +48,9 @@ export default function Dashboard() {
   useEffect(() => {
     setTimeout(() => setIsPageLoading(false), 800);
 
-    const storedCache = localStorage.getItem("cache");
     const storedNamespace = localStorage.getItem("selectedNamespace");
     const storedQuery = localStorage.getItem("query");
 
-    if (storedCache) setCache(JSON.parse(storedCache));
     if (storedNamespace) setSelectedNamespace(storedNamespace);
     
     // If there was a pending query from landing page, execute it
@@ -74,10 +71,6 @@ export default function Dashboard() {
         }
     }
   }, []);
-
-  // Sync cache
-  useEffect(() => localStorage.setItem("cache", JSON.stringify(cache)), [cache]);
-  useEffect(() => { if (selectedNamespace) localStorage.setItem("selectedNamespace", selectedNamespace); }, [selectedNamespace]);
 
   // Fetch Namespaces
   useEffect(() => {
@@ -128,21 +121,18 @@ export default function Dashboard() {
       // Add placeholder bot message
       setMessages([...currentMessages, { id: loadingId, role: "assistant", content: "", isLoading: true }]);
 
-      // Check cache
-      const cacheKey = `${namespace}-${queryText.trim().toLowerCase()}`;
-      if (cache[cacheKey]) {
-           setMessages(prev => prev.map(m => 
-                m.id === loadingId ? { ...m, content: cache[cacheKey], isLoading: false } : m
-           ));
-           setIsLoading(false);
-           return;
-      }
-
       try {
         // Extract previous messages for context (exclude loading placeholders)
         const chatHistory = currentMessages
           .filter(m => !m.id.startsWith("loading-"))
           .map(m => ({ role: m.role, content: m.content }));
+
+        console.log(`📤 Sending query to API:`, {
+          question: queryText,
+          namespace: namespace,
+          chatHistoryLength: chatHistory.length,
+          chatHistory: chatHistory.map(m => `${m.role}: ${m.content.substring(0, 50)}...`)
+        });
 
         const res = await fetch("/api/query", {
             method: "POST",
@@ -181,7 +171,6 @@ export default function Dashboard() {
           // Force React to recognize the change
           return [...updated];
         });
-        setCache(prev => ({ ...prev, [cacheKey]: answer }));
 
       } catch (error) {
         console.error("Query error:", error);
@@ -227,104 +216,191 @@ export default function Dashboard() {
     <div className="flex h-screen w-full bg-black text-white overflow-hidden font-sans selection:bg-neutral-800">
       <ToastContainer position="top-right" autoClose={3000} theme="dark" />
 
-      {/* Mobile Toggle */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="fixed top-4 left-4 z-50 md:hidden bg-neutral-900 p-2 rounded-lg border border-neutral-800 cursor-pointer hover:border-emerald-500/50 transition-colors"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-      >
-        <motion.div
-          animate={{ rotate: sidebarOpen ? 0 : 180 }}
-          transition={{ duration: 0.3 }}
-        >
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </motion.div>
-      </motion.button>
-
       {/* Sidebar */}
       <AnimatePresence mode="popLayout">
         {sidebarOpen && (
-             <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 300, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                className="h-full border-r border-neutral-800 bg-neutral-950 flex flex-col z-40"
-             >
-                <div className="p-6 flex flex-col h-full gap-6 w-[300px]">
-                     {/* Header */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 cursor-pointer group"
-                        onClick={() => router.push("/")}
-                    >
-                        <motion.div 
-                            whileHover={{ scale: 1.1, rotate: 5 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-shadow group-hover:shadow-emerald-500/40"
-                        >
-                            <Sparkles className="w-4 h-4 text-white" />
+          <>
+            {/* Mobile Overlay Background */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+            
+            {/* Sidebar Content */}
+            <motion.div
+              initial={{ x: "-100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "-100%", opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 left-0 w-80 border-r border-neutral-800 bg-neutral-950 flex flex-col z-50 md:hidden"
+            >
+              <div className="p-6 flex flex-col h-full gap-6 overflow-y-auto">
+                {/* Close Button - Mobile Only */}
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setSidebarOpen(false)}
+                  className="absolute top-4 right-4 bg-neutral-900 p-2 rounded-lg border border-neutral-800 cursor-pointer hover:border-emerald-500/50 transition-colors"
+                >
+                  <X size={20} className="text-white" />
+                </motion.button>
+
+                {/* Header */}
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center gap-3 cursor-pointer group pr-10"
+                  onClick={() => {
+                    router.push("/");
+                  }}
+                >
+                  <motion.div 
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-shadow group-hover:shadow-emerald-500/40 flex-shrink-0"
+                  >
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </motion.div>
+                  <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+                    Lexi AI
+                  </h1>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-4"
+                >
+                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Knowledge Base</label>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                  >
+                    <NamespaceSelector
+                      namespaces={namespaces}
+                      isLoading={false}
+                      onSelect={(value) => {
+                        setSelectedNamespace(value);
+                        setSidebarOpen(false);
+                      }}
+                      currentSelected={selectedNamespace}
+                    />
                         </motion.div>
-                        <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                            Lexi AI
-                        </h1>
                     </motion.div>
 
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="space-y-4"
-                    >
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Knowledge Base</label>
-                        <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                        >
-                            <NamespaceSelector
-                                namespaces={namespaces}
-                                isLoading={false}
-                                onSelect={(value) => setSelectedNamespace(value)}
-                                currentSelected={selectedNamespace}
-                            />
-                        </motion.div>
-                    </motion.div>
-
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                        className="mt-auto pt-4 border-t border-neutral-900"
-                    >
-                        <div className="text-xs text-neutral-500 flex items-center justify-between">
-                            <motion.span
-                                whileHover={{ scale: 1.05 }}
-                                className="cursor-default"
-                            >
-                                Cmd + B to toggle
-                            </motion.span>
-                            <span className="opacity-50">v2.1.0</span>
-                        </div>
-                    </motion.div>
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-auto pt-4 border-t border-neutral-900"
+                  >
+                    <div className="text-xs text-neutral-500">
+                      <motion.span
+                        whileHover={{ scale: 1.05 }}
+                        className="cursor-default"
+                      >
+                        Tap to close
+                      </motion.span>
+                    </div>
+                  </motion.div>
                 </div>
-             </motion.div>
+              </motion.div>
+            </>
         )}
       </AnimatePresence>
+
+      {/* Desktop Sidebar - Always Visible on MD+ */}
+      <div className="hidden md:flex h-full border-r border-neutral-800 bg-neutral-950 flex-col w-[300px]">
+        <div className="p-6 flex flex-col h-full gap-6 overflow-y-auto">
+          {/* Header */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3 cursor-pointer group"
+            onClick={() => router.push("/")}
+          >
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-shadow group-hover:shadow-emerald-500/40 flex-shrink-0"
+            >
+              <Sparkles className="w-4 h-4 text-white" />
+            </motion.div>
+            <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
+              Lexi AI
+            </h1>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-4"
+          >
+            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Knowledge Base</label>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <NamespaceSelector
+                namespaces={namespaces}
+                isLoading={false}
+                onSelect={(value) => setSelectedNamespace(value)}
+                currentSelected={selectedNamespace}
+              />
+            </motion.div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-auto pt-4 border-t border-neutral-900"
+          >
+            <div className="text-xs text-neutral-500 flex items-center justify-between">
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                className="cursor-default"
+              >
+                Cmd + B to toggle
+              </motion.span>
+              <span className="opacity-50">v2.1.0</span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Mobile Menu Toggle Button - Only Show When Sidebar Closed */}
+      {!sidebarOpen && (
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="fixed top-4 left-4 z-50 md:hidden bg-neutral-900 p-2 rounded-lg border border-neutral-800 cursor-pointer hover:border-emerald-500/50 transition-colors"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <Menu size={20} className="text-white" />
+        </motion.button>
+      )}
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative bg-black overflow-hidden min-w-0">
         <DotBackground />
         
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden w-full z-10 p-4 md:p-8 relative">
-             <div className="max-w-3xl mx-auto space-y-8 pb-32 w-full">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden w-full z-10 p-3 sm:p-4 md:p-8 relative">
+             <div className="max-w-2xl sm:max-w-3xl mx-auto space-y-6 sm:space-y-8 pb-40 sm:pb-32 w-full px-2 sm:px-0">
                 {messages.length === 0 ? (
                     <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5 }}
-                        className="h-[60vh] flex flex-col items-center justify-center text-center space-y-4"
+                        className="h-[50vh] sm:h-[60vh] flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4"
                     >
                          <motion.div 
                             animate={{ 
@@ -336,16 +412,16 @@ export default function Dashboard() {
                                 repeat: Infinity,
                                 repeatDelay: 2
                             }}
-                            className="w-16 h-16 rounded-2xl bg-neutral-900 flex items-center justify-center border border-neutral-800 shadow-xl mb-4 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                            className="w-12 sm:w-16 h-12 sm:h-16 rounded-2xl bg-neutral-900 flex items-center justify-center border border-neutral-800 shadow-xl mb-2 sm:mb-4 hover:border-emerald-500/50 transition-colors cursor-pointer"
                             onClick={() => setSidebarOpen(true)}
                          >
-                            <Sparkles className="w-8 h-8 text-emerald-400" />
+                            <Sparkles className="w-6 sm:w-8 h-6 sm:h-8 text-emerald-400" />
                          </motion.div>
                          <motion.h2 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
-                            className="text-2xl font-bold text-neutral-200"
+                            className="text-xl sm:text-2xl font-bold text-neutral-200"
                          >
                             How can I help you today?
                          </motion.h2>
@@ -353,7 +429,7 @@ export default function Dashboard() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="text-neutral-500 max-w-md"
+                            className="text-sm sm:text-base text-neutral-500 max-w-xs sm:max-w-md"
                          >
                             Select a namespace on the left and ask any question about your documentation.
                          </motion.p>
@@ -383,27 +459,27 @@ export default function Dashboard() {
                                     initial={{ opacity: 0, x: 20, scale: 0.95 }}
                                     animate={{ opacity: 1, x: 0, scale: 1 }}
                                     whileHover={{ scale: 1.02 }}
-                                    className="bg-neutral-800 text-white px-5 py-3.5 rounded-2xl rounded-tr-none max-w-[80%] min-w-0 shadow-lg hover:bg-neutral-750 transition-colors"
+                                    className="bg-neutral-800 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl rounded-tr-none max-w-[85%] sm:max-w-[80%] min-w-0 shadow-lg hover:bg-neutral-750 transition-colors"
                                 >
-                                    <p className="text-sm md:text-base leading-relaxed break-words">{msg.content}</p>
+                                    <p className="text-sm sm:text-base leading-relaxed break-words">{msg.content}</p>
                                 </motion.div>
                             ) : (
                                 <motion.div 
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.1 }}
-                                    className="flex gap-4 w-full max-w-full relative z-10"
+                                    className="flex gap-2 sm:gap-4 w-full max-w-full relative z-10"
                                 >
                                     <motion.div 
                                         whileHover={{ scale: 1.1 }}
-                                        className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex-shrink-0 flex items-center justify-center mt-1 relative z-10 shadow-lg shadow-emerald-500/20"
+                                        className="w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex-shrink-0 flex items-center justify-center mt-0 sm:mt-1 relative z-10 shadow-lg shadow-emerald-500/20"
                                     >
-                                        <Sparkles className="w-4 h-4 text-white" />
+                                        <Sparkles className="w-3 sm:w-4 h-3 sm:h-4 text-white" />
                                     </motion.div>
                                     <motion.div 
                                         initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        className="flex-1 min-w-0 bg-neutral-900/90 rounded-2xl rounded-tl-none px-5 py-4 border border-neutral-800 shadow-lg relative z-10 hover:border-emerald-500/30 transition-colors"
+                                        className="flex-1 min-w-0 bg-neutral-900/90 rounded-2xl rounded-tl-none px-4 sm:px-5 py-3 sm:py-4 border border-neutral-800 shadow-lg relative z-10 hover:border-emerald-500/30 transition-colors"
                                     >
                                         <Answer answer={msg.content || ""} isLoading={!!msg.isLoading} />
                                     </motion.div>
@@ -421,9 +497,9 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="absolute bottom-0 left-0 w-full p-4 md:p-6 bg-gradient-to-t from-black via-black to-transparent z-30"
+            className="absolute bottom-0 left-0 w-full p-3 sm:p-4 md:p-6 bg-gradient-to-t from-black via-black to-transparent z-30"
         >
-            <div className="max-w-3xl mx-auto relative">
+            <div className="max-w-2xl sm:max-w-3xl mx-auto relative">
                 <motion.div
                     whileFocus={{ scale: 1.02 }}
                     transition={{ type: "spring", stiffness: 300 }}

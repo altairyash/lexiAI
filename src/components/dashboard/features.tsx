@@ -11,18 +11,26 @@ import { motion } from "framer-motion";
 
 export function Features() {
   return (
-    <section id="features" className="py-20 relative z-20">
-      <div className="max-w-7xl mx-auto px-4 md:px-8">
-        <motion.h2 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-3xl md:text-5xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-500 font-serif mb-12"
-        >
-           Intelligent & Automated
-        </motion.h2>
-        <BentoGrid className="max-w-4xl mx-auto">
+    <>
+      <motion.h2 
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="text-3xl md:text-4xl font-bold text-center text-white mb-6"
+      >
+        Powerful Features
+      </motion.h2>
+      <motion.p
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.1 }}
+        className="text-center text-neutral-400 text-base mb-16 max-w-2xl mx-auto"
+      >
+        Everything you need to build intelligent documentation search
+      </motion.p>
+      <BentoGrid className="max-w-6xl mx-auto">
         {items.map((item, i) => (
             <motion.div
               key={i}
@@ -40,9 +48,8 @@ export function Features() {
               />
             </motion.div>
         ))}
-        </BentoGrid>
-      </div>
-    </section>
+      </BentoGrid>
+    </>
   );
 }
 
@@ -52,27 +59,26 @@ import { FeatureIconContainer, MockTerminal, MockSearch, MockGraph } from "@/com
 
 const items = [
   {
-    title: "Instant Indexing",
-    description: "Point to any URL, and we'll scrape and vectorise it effectively immediately.",
+    title: "Smart CLI Tool",
+    description: "Use 'npx lexi-ai-docs scrape' to index any GitHub repo. AI automatically generates semantic namespace names from repo context—no manual setup needed.",
     header: <FeatureIconContainer><MockTerminal /></FeatureIconContainer>,
     icon: <IconClipboardCopy className="h-4 w-4 text-neutral-500" />,
   },
   {
     title: "Semantic Search",
-    description: "We don't just match keywords. We understand the intent behind your query.",
+    description: "Understands the intent behind questions, not just keywords. Ask 'how do I deploy?' and get actual deployment guides, not just keyword matches.",
     header: <FeatureIconContainer><MockSearch /></FeatureIconContainer>,
     icon: <IconFileBroken className="h-4 w-4 text-neutral-500" />,
   },
   {
-    title: "Context Aware",
-    description: "The AI retains context across queries to provide more accurate answers.",
+    title: "Multi-turn Conversations",
+    description: "The AI remembers context across messages. Ask follow-ups like 'show me in code' or 'also explain this part' and get coherent, connected answers.",
     header: <FeatureIconContainer><MockGraph /></FeatureIconContainer>,
     icon: <IconSignature className="h-4 w-4 text-neutral-500" />,
   },
   {
     title: "Multi-Source Knowledge",
-    description:
-      "Combine documentation from React, Next.js, and your own internal wikis into one unified brain.",
+    description: "Index React, Next.js, Vue, your internal wikis—all into one unified brain. Query across namespaces and get answers combining knowledge from multiple sources.",
     header: <FeatureIconContainer><MockTerminal /></FeatureIconContainer>,
     icon: <IconTableColumn className="h-4 w-4 text-neutral-500" />,
   },

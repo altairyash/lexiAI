@@ -11,41 +11,61 @@
   }
 }
 
+/* Accessibility: Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @theme {
-  --font-sans: "Inter", "Montserrat", sans-serif;
-  --font-serif: "Playfair Display", serif;
+  --font-display: "Outfit", "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
   --font-mono: "Menlo", monospace;
 
-  --color-background: oklch(0.1 0 0);
-  /* Almost black */
-  --color-foreground: oklch(0.985 0 0);
+  /* Color Palette - Professional Dark Mode */
+  /* Background - Deep charcoal for reduced eye strain */
+  --color-background: #0f0f0f;
+  --color-foreground: #ffffff;
 
-  --color-card: oklch(0.14 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
+  /* Card - Slightly elevated */
+  --color-card: #1a1a1a;
+  --color-card-foreground: #ffffff;
 
-  --color-popover: oklch(0.1 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
+  /* Popover */
+  --color-popover: #0f0f0f;
+  --color-popover-foreground: #ffffff;
 
-  --color-primary: oklch(0.85 0.15 140);
-  /* Greenish/Lime accent for 'Talk to sales' button vibes */
-  --color-primary-foreground: oklch(0.1 0 0);
+  /* Primary - Emerald (trustworthy, modern) */
+  --color-primary: #10b981;
+  --color-primary-foreground: #000000;
 
-  --color-secondary: oklch(0.2 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
+  /* Secondary - Slate */
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f1f5f9;
 
-  --color-muted: oklch(0.2 0 0);
-  --color-muted-foreground: oklch(0.6 0 0);
+  /* Muted - Gray text at proper contrast (4.5:1 WCAG AA) */
+  --color-muted: #2d2d2d;
+  --color-muted-foreground: #a3a3a3;
 
-  --color-accent: oklch(0.2 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
+  /* Accent - Cyan for visual hierarchy */
+  --color-accent: #06b6d4;
+  --color-accent-foreground: #000000;
 
-  --color-destructive: oklch(0.4 0.15 20);
-  --color-destructive-foreground: oklch(0.985 0 0);
+  /* Error - Red with proper contrast */
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
 
-  --color-border: oklch(0.2 0 0);
-  --color-input: oklch(0.2 0 0);
-  --color-ring: oklch(0.85 0.15 140);
-  /* Matches primary */
+  /* Border - Visible in both light/dark */
+  --color-border: #2d2d2d;
+  --color-input: #2d2d2d;
+
+  /* Focus ring - Primary emerald */
+  --color-ring: #10b981;
 
   --radius: 0.5rem;
 }
@@ -55,27 +75,72 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    font-size: 16px; /* Minimum 16px for mobile readability */
+    line-height: 1.5; /* Professional line height */
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Display headings - Use cleaner Outfit font */
   h1,
   h2,
-  h3,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.5px; /* Professional tight spacing */
+  }
+
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+
   h4,
   h5,
   h6 {
-    font-family: var(--font-serif);
+    font-weight: 600;
+  }
+
+  /* Body text - Readable 65-75 char line length */
+  p {
+    max-width: 65ch;
+    line-height: 1.6;
+  }
+
+  /* Links - Accessible blue with underline */
+  a {
+    @apply text-emerald-400 hover:text-emerald-300 underline transition-colors duration-200;
+  }
+
+  /* Buttons - Minimum 44x44px touch target */
+  button,
+  [role="button"] {
+    @apply min-h-11 min-w-11 transition-all duration-200;
   }
 }
 
-/* Custom Markdown Styles */
+/* Markdown Styles */
 .markdown {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.6;
-  color: rgb(229, 231, 235) !important; /* Override with explicit light gray for visibility */
+  color: #e5e7eb;
   max-width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -84,10 +149,11 @@
 .markdown h1,
 .markdown h2,
 .markdown h3 {
-  color: var(--color-foreground);
+  color: #ffffff;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
   font-weight: 600;
+  font-family: var(--font-display);
 }
 
 .markdown h1 {
@@ -103,13 +169,13 @@
 }
 
 .markdown code {
-  @apply bg-secondary/50 rounded px-1 py-0.5 font-mono text-sm text-primary;
+  @apply bg-neutral-900 rounded px-2 py-1 font-mono text-sm text-emerald-400 border border-neutral-800;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
 .markdown pre {
-  @apply bg-secondary/30 border border-border rounded-lg p-4 overflow-x-auto my-4;
+  @apply bg-neutral-950 border border-neutral-800 rounded-lg p-4 overflow-x-auto my-4;
   max-width: 100%;
   word-break: break-word;
   overflow-wrap: break-word;

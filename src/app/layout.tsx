@@ -1,22 +1,39 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ 
-  subsets: ["latin"], 
+const inter = Inter({
+  subsets: ["latin"],
   variable: "--font-sans",
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
-const outfit = Outfit({ 
-  subsets: ["latin"], 
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "LexiAI",
-  description: "Open-Sourced AI Documentation Search Engine",
+  title: "Lexi AI — AI-Powered Documentation Search",
+  description:
+    "Index any GitHub repository and query your documentation with natural language. Powered by OpenAI + Pinecone vector search.",
+  openGraph: {
+    title: "Lexi AI — AI-Powered Documentation Search",
+    description:
+      "Index GitHub repos and query documentation with AI. Semantic search powered by OpenAI embeddings.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -29,11 +46,14 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/logo.png" />
       </head>
-      <body className={cn(
-          "min-h-screen bg-background font-sans antialiased",
+      <body
+        className={cn(
+          "min-h-screen bg-[#050507] font-sans antialiased",
           inter.variable,
-          outfit.variable
-        )}>
+          spaceGrotesk.variable,
+          jetbrainsMono.variable
+        )}
+      >
         {children}
       </body>
     </html>

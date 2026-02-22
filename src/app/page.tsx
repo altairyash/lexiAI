@@ -1,452 +1,552 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FloatingNav } from "@/components/ui/floating-navbar";
-import { Spotlight } from "@/components/ui/spotlight";
-import { BackgroundBeams } from "@/components/ui/background-beams";
-import { MovingBorderBtn } from "@/components/ui/moving-border";
-import { Features } from "@/components/dashboard/features";
-import { Footer } from "@/components/dashboard/footer";
-import { motion } from "framer-motion";
-import LoaderSVG from "@/custom-components/ui/loader-svg";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { NeuralBackground } from "@/components/ui/neural-background";
 import { Typewriter } from "react-simple-typewriter";
-import { HomeIcon, Book, Search, Github, Terminal, RefreshCw, List as ListIcon } from "lucide-react";
+import {
+  Github,
+  Terminal,
+  Zap,
+  Search,
+  MessageSquare,
+  Database,
+  ArrowRight,
+  ChevronDown,
+  Copy,
+  Check,
+  ExternalLink,
+} from "lucide-react";
 
-import { PlaceholdersAndVanishInput } from "@/components/ui/vanish-input";
+// ── Tiny helper ─────────────────────────────────────────────────────────────
+function cn(...classes: (string | undefined | false | null)[]) {
+  return classes.filter(Boolean).join(" ");
+}
 
+// ── Floating navbar ──────────────────────────────────────────────────────────
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <motion.nav
+      initial={{ y: -80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+      className={cn(
+        "fixed top-0 inset-x-0 z-50 flex items-center justify-between px-6 md:px-10 h-16 transition-all duration-500",
+        scrolled
+          ? "bg-black/70 backdrop-blur-xl border-b border-white/5 shadow-xl shadow-black/40"
+          : "bg-transparent"
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+          <Zap className="w-3.5 h-3.5 text-white" />
+        </div>
+        <span className="font-bold text-white tracking-tight text-sm">Lexi AI</span>
+      </div>
+      <div className="hidden md:flex items-center gap-8 text-sm text-neutral-400">
+        <a href="#how" className="hover:text-white transition-colors">How it works</a>
+        <a href="#features" className="hover:text-white transition-colors">Features</a>
+        <a
+          href="https://github.com/altairyash/lexiAI"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 hover:text-white transition-colors no-underline"
+        >
+          <Github className="w-3.5 h-3.5" /> GitHub
+        </a>
+      </div>
+    </motion.nav>
+  );
+}
+
+// ── Command snippet with copy ─────────────────────────────────────────────────
+function CommandSnippet({ cmd }: { cmd: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(cmd);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm font-mono text-sm w-full max-w-lg">
+      <span className="text-neutral-600 select-none">$</span>
+      <span className="flex-1 text-neutral-300 truncate">{cmd}</span>
+      <button
+        onClick={copy}
+        className="text-neutral-500 hover:text-white transition-colors cursor-pointer p-1 rounded min-h-0 min-w-0"
+        aria-label="Copy command"
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-violet-400" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
+
+// ── Bento feature card ────────────────────────────────────────────────────────
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  accent: string;
+  delay?: number;
+  wide?: boolean;
+}
+function FeatureCard({ icon, title, description, accent, delay = 0, wide = false }: FeatureCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 32 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ delay, duration: 0.55, ease: "easeOut" }}
+      className={cn(
+        "group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-7 overflow-hidden hover:border-white/[0.12] transition-all duration-500 hover:bg-white/[0.04]",
+        wide ? "md:col-span-2" : ""
+      )}
+    >
+      {/* Mesh gradient glow */}
+      <div className={cn("absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700", accent)} />
+      <div className="mb-5 w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/[0.08]">
+        {icon}
+      </div>
+      <h3 className="text-white font-semibold text-base mb-2 tracking-tight">{title}</h3>
+      <p className="text-neutral-500 text-sm leading-relaxed max-w-none">{description}</p>
+      <div className="absolute bottom-0 left-0 w-0 h-px bg-gradient-to-r from-violet-500 to-indigo-500 group-hover:w-full transition-all duration-700" />
+    </motion.div>
+  );
+}
+
+// ── Step card ─────────────────────────────────────────────────────────────────
+interface StepProps {
+  num: string;
+  title: string;
+  desc: string;
+  code?: string;
+  delay?: number;
+}
+function StepCard({ num, title, desc, code, delay = 0 }: StepProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -24 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ delay, duration: 0.5 }}
+      className="relative flex gap-6 pb-12 last:pb-0"
+    >
+      {/* Vertical connector */}
+      <div className="flex flex-col items-center">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/30 flex-shrink-0 z-10">
+          {num}
+        </div>
+        <div className="flex-1 w-px bg-gradient-to-b from-violet-600/40 to-transparent mt-2" />
+      </div>
+      <div className="flex-1 pt-1">
+        <h3 className="text-white font-semibold text-lg mb-2">{title}</h3>
+        <p className="text-neutral-500 text-sm leading-relaxed mb-4">{desc}</p>
+        {code && <CommandSnippet cmd={code} />}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Main Page Component ───────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter();
-  const [isPageLoading, setIsPageLoading] = useState(true);
-  const [isNavigating, setIsNavigating] = useState(false);
   const [question, setQuestion] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: heroRef });
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const heroY = useTransform(scrollYProgress, [0, 0.6], [0, 60]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsPageLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const handleSearchSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
-      e?.preventDefault();
-      if (!question.trim()) return;
-
-      setIsNavigating(true);
-      localStorage.setItem("query", question);
-      localStorage.removeItem("selectedNamespace"); 
-      
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1000);
-  };
-
-  const handleGetStarted = () => {
+  const navigate = (path: string) => {
     setIsNavigating(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 1000);
+    setTimeout(() => router.push(path), 400);
   };
 
-  const navItems = [
-    { name: "Home", link: "#", icon: <HomeIcon className="h-4 w-4" /> },
-    { name: "Features", link: "#features", icon: <Search className="h-4 w-4" /> },
-    { name: "Dashboard", link: "/dashboard", icon: <Book className="h-4 w-4" /> },
-  ];
-
-  if (isPageLoading || isNavigating) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black cursor-wait">
-        <LoaderSVG />
-      </div>
-    );
-  }
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!question.trim()) return;
+    localStorage.setItem("query", question);
+    localStorage.removeItem("selectedNamespace");
+    navigate("/dashboard");
+  };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative w-full overflow-hidden bg-black/[0.96] antialiased"
-    >
-      <FloatingNav navItems={navItems} />
-
-      <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden pt-20 md:pt-0">
-        <Spotlight className="-top-40 left-0 md:-top-20 md:left-60" fill="white" />
-        
-        <div className="relative pt-20 md:pt-40 pb-20 z-10 w-full max-w-6xl mx-auto px-4 md:px-6 flex flex-col items-center justify-center text-center">
-          
+    <div className="relative min-h-screen bg-[#050507] text-white overflow-x-hidden">
+      <AnimatePresence>
+        {isNavigating && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.05 }}
-            transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
-            className="inline-flex items-center space-x-2 rounded-full border border-neutral-800 bg-neutral-900/50 px-4 py-1.5 text-sm text-neutral-300 backdrop-blur-xl mb-12 cursor-default hover:border-emerald-500/50 transition-colors"
+            key="nav-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-[999] bg-[#050507] flex items-center justify-center"
           >
-            <motion.span 
-              className="relative flex h-2 w-2"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </motion.span>
-            <motion.span
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 2.5, repeat: Infinity }}
-              className="font-medium"
-            >
-              Lexi AI v2.0 — Now Live
-            </motion.span>
+            <motion.div
+              animate={{ scale: [1, 1.3, 1], opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/40"
+            />
           </motion.div>
+        )}
+      </AnimatePresence>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.7 }}
-            className="mb-8 md:mb-10 max-w-4xl"
-          >
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold text-center text-white leading-tight md:leading-snug tracking-tight">
-              Query Any<br />
-              <motion.span 
-                className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-              >
-                Documentation
-              </motion.span>
-              <br />
-              <motion.span
-                className="text-neutral-300"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-              >
-                with AI
-              </motion.span>
-            </h1>
-          </motion.div>
+      <Nav />
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mb-12 md:mb-16 max-w-2xl"
-          >
-            <p className="text-base md:text-lg text-neutral-400 leading-relaxed">
-              Index GitHub repos instantly • AI-powered semantic search • Multi-turn conversations
-            </p>
-            <p className="text-sm md:text-base text-neutral-500 mt-4 font-mono">
-              Works with&nbsp;
-              <motion.span 
-                className="text-emerald-400 font-semibold"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 0.3 }}
-              >
-                <Typewriter
-                  words={["React", "Next.js", "Python", "Express", "Vue", "Laravel"]}
-                  loop={true}
-                  cursor
-                  cursorStyle="_"
-                  typeSpeed={60}
-                  deleteSpeed={40}
-                  delaySpeed={1200}
-                />
-              </motion.span>
-            </p>
-          </motion.div>
-          
+      {/* ───── HERO ───── */}
+      <section
+        ref={heroRef}
+        className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
+      >
+        {/* Three.js neural net */}
+        <NeuralBackground
+          particleCount={110}
+          color="#7c3aed"
+          accentColor="#4f46e5"
+          interactive
+        />
+
+        {/* Radial vignette */}
+        <div className="absolute inset-0 bg-radial-gradient pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,transparent_40%,#050507_100%)] pointer-events-none" />
+
+        {/* Subtle grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+
+        <motion.div
+          style={{ opacity: heroOpacity, y: heroY }}
+          className="relative z-10 flex flex-col items-center text-center px-4 max-w-5xl mx-auto w-full pt-20"
+        >
+          {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7, type: "spring" }}
-            className="mb-12 md:mb-16 group"
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="mb-10 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-medium backdrop-blur-sm"
           >
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-lg blur-xl group-hover:from-emerald-500/30 group-hover:to-cyan-500/30 transition-all duration-500 opacity-0 group-hover:opacity-100"></div>
-              <div className="relative inline-flex items-center gap-3 px-5 py-3 rounded-lg bg-neutral-900/60 border border-neutral-700 backdrop-blur-sm hover:border-emerald-500/50 transition-all duration-300 shadow-2xl">
-                <span className="text-xs text-neutral-500 font-mono">$</span>
-                <code className="text-sm md:text-base text-emerald-400 font-mono whitespace-nowrap">npx lexi-ai-docs scrape&nbsp;</code>
-                <motion.span
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-cyan-400 text-sm"
-                >
-                  &lt;url&gt;&nbsp;
-                </motion.span>
-                <code className="text-sm md:text-base text-emerald-400 font-mono">--token</code>
-              </div>
-            </div>
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-400" />
+            </span>
+            Lexi AI v2.1 · Now live
           </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.6 }}
-            className="w-full max-w-3xl relative mb-12 hidden md:block"
+            transition={{ delay: 0.2, duration: 0.7 }}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.95] mb-6"
+            style={{ fontFamily: "var(--font-display)" }}
           >
-            <div className="relative z-10">
-              <PlaceholdersAndVanishInput
-                placeholders={[
-                    "How do I implement middleware in Next.js?",
-                    "Explain async/await patterns in Python...",
-                    "What is the useEffect dependency array?",
-                    "How to deploy to production?",
-                ]}
-                onChange={(e) => setQuestion(e.target.value)}
-                onSubmit={(e) => handleSearchSubmit(e)}
-                value={question}
-              />
-            </div>
-          </motion.div>
+            <span className="text-white">Query any</span>
+            <br />
+            <span
+              className="bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent"
+            >
+              documentation
+            </span>
+            <br />
+            <span className="text-neutral-400">with AI</span>
+          </motion.h1>
 
-          <motion.div 
+          {/* Sub */}
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.6 }}
+            className="text-neutral-500 text-base md:text-lg max-w-lg leading-relaxed mb-3 max-w-none"
+          >
+            Index GitHub repositories in seconds. Ask questions in natural language.
+            Get intelligent answers powered by semantic search + OpenAI.
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.45 }}
+            className="text-sm text-neutral-600 font-mono mb-10 max-w-none"
+          >
+            Works with{" "}
+            <span className="text-violet-400 font-semibold">
+              <Typewriter
+                words={["React", "Next.js", "Python", "Vue", "Express", "Laravel", "Rust"]}
+                loop
+                cursor
+                cursorStyle="_"
+                typeSpeed={65}
+                deleteSpeed={40}
+                delaySpeed={1300}
+              />
+            </span>
+          </motion.p>
+
+          {/* Search bar */}
+          <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9 }}
-            className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full px-4"
+            transition={{ delay: 0.55, duration: 0.5 }}
+            onSubmit={handleSearch}
+            className="w-full max-w-xl mb-8 group"
           >
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <MovingBorderBtn
-                borderRadius="1.75rem"
-                className="bg-neutral-900 text-white border-neutral-800 font-semibold text-base px-8 py-3 hover:border-emerald-500/50 transition-all duration-200 cursor-pointer min-h-11 min-w-11 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black"
-                onClick={handleGetStarted}
+            <div className="relative flex items-center rounded-2xl border border-white/[0.08] bg-white/[0.03] hover:border-violet-500/30 focus-within:border-violet-500/50 transition-all duration-300 shadow-2xl shadow-black/50 backdrop-blur-sm">
+              <Search className="absolute left-4 w-4 h-4 text-neutral-600 group-focus-within:text-violet-400 transition-colors" />
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="How do I implement authentication in Next.js?"
+                className="flex-1 bg-transparent pl-11 pr-4 py-4 text-sm text-white placeholder-neutral-600 outline-none font-sans"
+              />
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="m-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:from-violet-500 hover:to-indigo-500 transition-all duration-200 shadow-lg shadow-violet-600/30 cursor-pointer flex items-center gap-1.5 min-h-0 min-w-0"
               >
-                Go to Dashboard
-              </MovingBorderBtn>
-            </motion.div>
+                Search <ArrowRight className="w-3.5 h-3.5" />
+              </motion.button>
+            </div>
+          </motion.form>
 
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => window.open("https://github.com/altairyash/lexiAI", "_blank")}
-              className="group relative inline-flex h-12 min-h-11 items-center justify-center overflow-hidden rounded-full bg-neutral-950 px-8 font-semibold text-neutral-200 transition-all duration-200 hover:bg-neutral-900 hover:text-white border border-neutral-700 hover:border-emerald-500/50 w-full sm:w-auto cursor-pointer min-h-11 min-w-11 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-black"
-              aria-label="Star on GitHub"
-            >
-              <Github className="mr-2 h-5 w-5 transition-transform group-hover:scale-110 duration-200" />
-              <span>Star on GitHub</span>
-              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-            </motion.button>
-          </motion.div>
-        </div>
-
-        <BackgroundBeams />
-      </div>
-
-      {/* Getting Started Section */}
-      <section className="relative z-10 w-full bg-black/40 border-t border-neutral-900 py-24 md:py-32">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          {/* CTA buttons */}
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.8 }}
-            className="space-y-16"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+            className="flex flex-col sm:flex-row items-center gap-3"
           >
-            {/* Section Header */}
-            <div className="text-center max-w-3xl mx-auto space-y-6">
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.1 }}
-              >
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
-                  Get Started in <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">3 Steps</span>
-                </h2>
-              </motion.div>
-              <motion.p 
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="text-base md:text-lg text-neutral-400 leading-relaxed"
-              >
-                Index any GitHub repository, then search your documentation with natural language queries powered by AI.
-              </motion.p>
-            </div>
-
-            {/* Steps Grid */}
-            <div className="grid md:grid-cols-3 gap-8">
-              {/* Step 1 - Scrape */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="group relative h-full cursor-pointer transition-all duration-200 focus-within:ring-2 focus-within:ring-emerald-500 rounded-xl"
-                role="region"
-                aria-label="Index Your Docs - Step 1"
-                tabIndex={0}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 blur-xl -z-10"></div>
-                <div className="relative h-full border border-neutral-800 rounded-xl p-8 bg-gradient-to-br from-neutral-900/50 to-neural-950/30 backdrop-blur-sm group-hover:bg-neutral-900/40 group-hover:border-emerald-500/30 transition-all duration-200 flex flex-col">
-                  {/* Step Number */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400/20 to-emerald-600/20 border border-emerald-500/50 flex items-center justify-center">
-                        <Terminal className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-                      </div>
-                      <span className="text-2xl font-bold text-neutral-700 group-hover:text-neutral-600 transition-colors">01</span>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-white mb-4">Index Your Docs</h3>
-                  <p className="text-neutral-400 text-sm leading-relaxed mb-8 flex-grow">
-                    Point to any public GitHub repository. Our CLI tool automatically indexes your documentation and generates smart semantic namespaces.
-                  </p>
-                  
-                  <div className="space-y-3">
-                    <p className="text-sm text-neutral-500 font-semibold">Example command:</p>
-                    <div className="bg-neutral-950/80 rounded-lg p-4 border border-neutral-800 overflow-hidden">
-                      <p className="text-neutral-300 font-mono text-xs break-all" aria-label="Example scrape command">
-                        <span className="text-neutral-600">$</span> npx lexi-ai-docs scrape&nbsp;
-                        <span className="text-cyan-400">https://github.com/owner/repo</span>&nbsp;
-                        <span className="text-emerald-400">--token</span>&nbsp;
-                        <span className="text-cyan-300">ghp_xxx</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Step 2 - Search */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.35 }}
-                className="group relative h-full"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl -z-10"></div>
-                <div className="relative h-full border border-neutral-800 rounded-xl p-8 bg-gradient-to-br from-neutral-900/50 to-neural-950/30 backdrop-blur-sm group-hover:bg-neutral-900/40 group-hover:border-blue-500/30 transition-all duration-300 flex flex-col">
-                  {/* Step Number */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400/20 to-blue-600/20 border border-blue-500/50 flex items-center justify-center">
-                        <Search className="w-5 h-5 text-blue-400" />
-                      </div>
-                      <span className="text-2xl font-bold text-neutral-700 group-hover:text-neutral-600 transition-colors">02</span>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-white mb-4">Ask Questions</h3>
-                  <p className="text-neutral-400 text-sm leading-relaxed mb-8 flex-grow">
-                    Query your documentation using natural language. The AI understands intent, context, and multi-turn conversations—not just keyword matching.
-                  </p>
-                  
-                  <div className="space-y-3">
-                    <p className="text-sm text-neutral-500 font-semibold">Example queries:</p>
-                    <div className="space-y-2">
-                      <div className="bg-neutral-950/80 rounded-lg p-3 border border-neutral-800">
-                        <p className="text-neutral-300 font-mono text-sm">"How do I deploy to production?"</p>
-                      </div>
-                      <div className="bg-neutral-950/80 rounded-lg p-3 border border-neutral-800">
-                        <p className="text-neutral-300 font-mono text-sm">"What's the best practice for authentication?"</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Step 3 - Keep Fresh */}
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.5 }}
-                className="group relative h-full"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl -z-10"></div>
-                <div className="relative h-full border border-neutral-800 rounded-xl p-8 bg-gradient-to-br from-neutral-900/50 to-neural-950/30 backdrop-blur-sm group-hover:bg-neutral-900/40 group-hover:border-cyan-500/30 transition-all duration-300 flex flex-col">
-                  {/* Step Number */}
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400/20 to-cyan-600/20 border border-cyan-500/50 flex items-center justify-center">
-                        <RefreshCw className="w-5 h-5 text-cyan-400" />
-                      </div>
-                      <span className="text-2xl font-bold text-neutral-700 group-hover:text-neutral-600 transition-colors">03</span>
-                    </div>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold text-white mb-4">Keep It Fresh</h3>
-                  <p className="text-neutral-400 text-sm leading-relaxed mb-8 flex-grow">
-                    When your documentation updates, simply re-scrape to keep your indexed knowledge base current. One command keeps everything in sync.
-                  </p>
-                  
-                  <div className="space-y-3">
-                    <p className="text-sm text-neutral-500 font-semibold">Re-scrape command:</p>
-                    <div className="bg-neutral-950/80 rounded-lg p-4 border border-neutral-800 overflow-hidden">
-                      <p className="text-neutral-300 font-mono text-xs break-all" aria-label="Example rescrape command">
-                        <span className="text-neutral-600">$</span> npx lexi-ai-docs rescrape&nbsp;
-                        <span className="text-cyan-400">my-repo-namespace</span>&nbsp;
-                        <span className="text-emerald-400">--token</span>&nbsp;
-                        <span className="text-cyan-300">ghp_xxx</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Requirements Box */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.6 }}
-              className="max-w-2xl mx-auto"
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-black text-sm font-bold hover:bg-neutral-100 transition-all duration-200 cursor-pointer min-h-0 min-w-0 shadow-lg shadow-white/10"
             >
-              <div className="border border-neutral-800 rounded-xl p-8 bg-gradient-to-r from-neutral-900/30 to-neutral-950/20 backdrop-blur-sm">
-                <div className="flex items-start gap-4">
-                  <Github className="w-5 h-5 text-emerald-400 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-white font-bold mb-2">You'll need a GitHub token</h4>
-                    <p className="text-neutral-400 text-sm leading-relaxed">
-                      Generate a personal access token at&nbsp;
-                      <a 
-                        href="https://github.com/settings/tokens/new" 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors underline"
-                      >
-                        github.com/settings/tokens/new
-                      </a>
-                      . Use it with the <code className="bg-neutral-900 text-emerald-400 px-2 py-1 rounded font-mono text-sm">--token</code> flag.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              Open Dashboard <ArrowRight className="w-4 h-4" />
+            </motion.button>
+            <motion.a
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              href="https://github.com/altairyash/lexiAI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl border border-white/[0.1] bg-white/[0.03] text-neutral-300 text-sm font-semibold hover:bg-white/[0.07] hover:text-white transition-all duration-200 no-underline min-h-0 min-w-0"
+            >
+              <Github className="w-4 h-4" /> Star on GitHub
+            </motion.a>
+          </motion.div>
+
+          {/* Scroll hint */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-neutral-700 text-xs"
+          >
+            <span>Scroll</span>
+            <motion.div
+              animate={{ y: [0, 4, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              <ChevronDown className="w-4 h-4" />
             </motion.div>
           </motion.div>
+        </motion.div>
+      </section>
+
+      {/* ───── HOW IT WORKS ───── */}
+      <section id="how" className="relative py-28 md:py-36 border-t border-white/[0.04]">
+        {/* Background accent */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-violet-600/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-5xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-16 text-center"
+          >
+            <p className="text-violet-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              How it works
+            </p>
+            <h2
+              className="text-3xl md:text-5xl font-bold tracking-tighter text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Three steps to{" "}
+              <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
+                instant answers
+              </span>
+            </h2>
+          </motion.div>
+
+          <div className="max-w-2xl mx-auto">
+            <StepCard
+              num="01"
+              title="Index your repository"
+              desc="Run the CLI tool pointing at any public GitHub repo. Lexi AI automatically crawls all Markdown/docs, generates embeddings, and stores them in a named vector namespace."
+              code="npx lexi-ai-docs scrape https://github.com/facebook/react --token ghp_xxx"
+              delay={0}
+            />
+            <StepCard
+              num="02"
+              title="Ask in natural language"
+              desc="Open the dashboard, select your namespace, and start asking questions. The AI understands intent and context — not just keywords."
+              delay={0.1}
+            />
+            <StepCard
+              num="03"
+              title="Keep it fresh"
+              desc="When docs update, re-index with a single command. One namespace per project, always in sync."
+              code="npx lexi-ai-docs rescrape my-namespace --token ghp_xxx"
+              delay={0.2}
+            />
+          </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        id="features"
-        className="relative z-10 w-full bg-black border-t border-neutral-900 py-24 md:py-32"
-      >
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <Features />
-        </div>
-      </motion.section>
+      {/* ───── FEATURES ───── */}
+      <section id="features" className="relative py-28 md:py-36 border-t border-white/[0.04]">
+        <div className="absolute bottom-0 right-0 w-[500px] h-[300px] bg-indigo-600/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10"
-      >
-        <Footer />
-      </motion.div>
-    </motion.div>
+        <div className="relative z-10 max-w-6xl mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mb-14 text-center"
+          >
+            <p className="text-violet-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              Features
+            </p>
+            <h2
+              className="text-3xl md:text-5xl font-bold tracking-tighter text-white"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Everything you need
+            </h2>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FeatureCard
+              icon={<Terminal className="w-5 h-5 text-violet-400" />}
+              title="Smart CLI"
+              description="One command to index any GitHub repo. AI auto-generates namespace names from repo context — no configuration needed."
+              accent="bg-violet-500"
+              delay={0}
+            />
+            <FeatureCard
+              icon={<Search className="w-5 h-5 text-indigo-400" />}
+              title="Semantic Search"
+              description="Understands intent behind questions, not just keyword matches. Vector similarity powered by OpenAI embeddings."
+              accent="bg-indigo-500"
+              delay={0.08}
+            />
+            <FeatureCard
+              icon={<MessageSquare className="w-5 h-5 text-purple-400" />}
+              title="Multi-turn Chat"
+              description="The AI remembers conversation context. Ask follow-ups like 'show me in code' or 'explain that further' naturally."
+              accent="bg-purple-500"
+              delay={0.16}
+            />
+            <FeatureCard
+              icon={<Database className="w-5 h-5 text-blue-400" />}
+              title="Vector Database"
+              description="Powered by Pinecone for ultra-fast retrieval. Thousands of docs indexed and searchable in milliseconds."
+              accent="bg-blue-500"
+              delay={0.24}
+              wide
+            />
+            <FeatureCard
+              icon={<Zap className="w-5 h-5 text-yellow-400" />}
+              title="Multi-Source Knowledge"
+              description="Index React, Next.js, your internal wikis — all in separate namespaces. Query and cross-reference as needed."
+              accent="bg-yellow-500"
+              delay={0.32}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ───── CTA STRIP ───── */}
+      <section className="relative py-24 border-t border-white/[0.04] overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-900/20 via-indigo-900/20 to-violet-900/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_80%_at_50%_50%,rgba(124,58,237,0.12),transparent)] pointer-events-none" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 32 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="relative z-10 max-w-2xl mx-auto px-6 text-center"
+        >
+          <h2
+            className="text-3xl md:text-5xl font-bold tracking-tighter text-white mb-6"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            Ready to skip the docs digging?
+          </h2>
+          <p className="text-neutral-500 mb-10 text-base leading-relaxed max-w-none">
+            Stop Ctrl+F-ing through pages of documentation. Ask Lexi AI anything, instantly.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-sm hover:from-violet-500 hover:to-indigo-500 transition-all duration-200 cursor-pointer min-h-0 min-w-0 shadow-xl shadow-violet-600/25"
+            >
+              Get started free <ArrowRight className="w-4 h-4" />
+            </motion.button>
+            <motion.a
+              whileHover={{ scale: 1.04 }}
+              href="https://github.com/altairyash/lexiAI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/[0.1] bg-white/[0.03] text-neutral-300 font-semibold text-sm hover:bg-white/[0.07] hover:text-white transition-all duration-200 no-underline min-h-0 min-w-0"
+            >
+              <ExternalLink className="w-4 h-4" /> View source
+            </motion.a>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ───── FOOTER ───── */}
+      <footer className="border-t border-white/[0.04] py-8 px-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+              <Zap className="w-2.5 h-2.5 text-white" />
+            </div>
+            <span className="text-neutral-500 text-xs font-medium">
+              Lexi AI · Open Source · MIT License
+            </span>
+          </div>
+          <p className="text-neutral-700 text-xs">
+            Made with care by{" "}
+            <a
+              href="https://github.com/altairyash"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-neutral-500 hover:text-violet-400 transition-colors no-underline"
+            >
+              Yash
+            </a>{" "}
+            · © {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }

@@ -24,6 +24,7 @@
     "@shadcn/ui": "^0.0.4",
     "@tabler/icons-react": "^3.36.1",
     "@types/got": "^9.6.12",
+    "@types/three": "^0.183.1",
     "axios": "^1.8.3",
     "chalk": "^4.1.2",
     "cheerio": "^1.0.0",
@@ -52,7 +53,8 @@
     "remark-gfm": "^4.0.1",
     "strip-markdown": "^6.0.0",
     "tailwind-merge": "^3.4.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.183.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -4,529 +4,594 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Menu, X, Sparkles } from "lucide-react";
+import {
+  Menu,
+  X,
+  Zap,
+  Send,
+  PanelLeftOpen,
+  PanelLeftClose,
+  ChevronDown,
+  Database,
+  Sparkles,
+  Plus,
+} from "lucide-react";
+import Select, { StylesConfig, GroupBase, SingleValue } from "react-select";
 
-import NamespaceSelector from "@/components/dashboard/namespace-selector";
 import Answer from "@/components/dashboard/answer";
 import { useNamespaceDetector } from "@/hooks/use-namespace-detector";
 import { Namespace } from "@/types";
 import { fetchNamespaces } from "../../utils/fetchNamespaces";
-import LoaderSVG from "@/custom-components/ui/loader-svg";
 import { cn } from "@/lib/utils";
-import { PlaceholdersAndVanishInput } from "@/components/ui/vanish-input";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Minimal Dot Background Content
-const DotBackground = () => (
-    <div className="absolute inset-0 h-full w-full bg-black bg-dot-white/[0.1] flex items-center justify-center pointer-events-none z-0">
-      <div className="absolute inset-0 flex items-center justify-center bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
-    </div>
-);
-
-type Message = {
-    id: string;
-    role: "user" | "assistant";
-    content: string;
-    isLoading?: boolean;
+// ── Namespace selector styles ─────────────────────────────────────────────────
+const selectStyles: StylesConfig<Namespace, false, GroupBase<Namespace>> = {
+  control: (base, state) => ({
+    ...base,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderColor: state.isFocused ? "rgba(124,58,237,0.5)" : "rgba(255,255,255,0.07)",
+    color: "#e5e5e5",
+    borderRadius: "0.75rem",
+    padding: "2px 4px",
+    fontSize: "0.8rem",
+    boxShadow: state.isFocused ? "0 0 0 1px rgba(124,58,237,0.3)" : "none",
+    "&:hover": { borderColor: "rgba(124,58,237,0.35)" },
+    transition: "all 0.2s",
+    cursor: "pointer",
+  }),
+  menu: (base) => ({
+    ...base,
+    backgroundColor: "#0e0e14",
+    border: "1px solid rgba(255,255,255,0.07)",
+    borderRadius: "0.75rem",
+    overflow: "hidden",
+    boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+    zIndex: 9999,
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected
+      ? "rgba(124,58,237,0.3)"
+      : state.isFocused
+      ? "rgba(255,255,255,0.05)"
+      : "transparent",
+    color: state.isSelected ? "#c4b5fd" : "#d4d4d4",
+    cursor: "pointer",
+    fontSize: "0.8rem",
+    "&:active": { backgroundColor: "rgba(124,58,237,0.2)" },
+  }),
+  singleValue: (base) => ({ ...base, color: "#e5e5e5" }),
+  input: (base) => ({ ...base, color: "#e5e5e5" }),
+  placeholder: (base) => ({ ...base, color: "#525252" }),
+  dropdownIndicator: (base) => ({ ...base, color: "#525252", "&:hover": { color: "#a78bfa" } }),
+  indicatorSeparator: () => ({ display: "none" }),
 };
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  isLoading?: boolean;
+};
+
+// ── Loader dots ───────────────────────────────────────────────────────────────
+function LoaderDots() {
+  return (
+    <div className="flex items-center gap-1.5 py-2 px-1">
+      {[0, 1, 2].map((i) => (
+        <motion.div
+          key={i}
+          className="w-2 h-2 rounded-full bg-violet-400"
+          animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
+          transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+function EmptyState({
+  hasNamespace,
+  onOpenSidebar,
+}: {
+  hasNamespace: boolean;
+  onOpenSidebar: () => void;
+}) {
+  const suggestions = [
+    "How do I get started?",
+    "What are the main concepts?",
+    "Show me a code example",
+    "How do I deploy this?",
+  ];
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4 }}
+      className="flex flex-col items-center justify-center text-center h-full py-20 px-6"
+    >
+      <motion.div
+        animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.05, 1] }}
+        transition={{ duration: 5, repeat: Infinity, repeatDelay: 3 }}
+        className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border border-violet-500/20 flex items-center justify-center mb-6 shadow-xl shadow-violet-500/10"
+      >
+        <Zap className="w-7 h-7 text-violet-400" />
+      </motion.div>
+      <h2 className="text-xl font-bold text-white mb-2 tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
+        {hasNamespace ? "What do you want to know?" : "Select a knowledge base"}
+      </h2>
+      <p className="text-neutral-600 text-sm max-w-sm leading-relaxed mb-8">
+        {hasNamespace
+          ? "Ask any question about your indexed documentation."
+          : "Choose a namespace from the sidebar to start chatting with your docs."}
+      </p>
+      {!hasNamespace && (
+        <button
+          onClick={onOpenSidebar}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600/20 border border-violet-500/20 text-violet-300 text-sm font-medium hover:bg-violet-600/30 hover:border-violet-500/40 transition-all duration-200 cursor-pointer min-h-0 min-w-0"
+        >
+          <Database className="w-4 h-4" /> Browse knowledge bases
+        </button>
+      )}
+      {hasNamespace && (
+        <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+          {suggestions.map((s, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.07 }}
+              className="p-3 rounded-xl border border-white/[0.06] bg-white/[0.02] text-neutral-500 text-xs text-left hover:border-violet-500/25 hover:bg-white/[0.04] hover:text-neutral-300 transition-all duration-200 cursor-default"
+            >
+              {s}
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const router = useRouter();
-  const [isPageLoading, setIsPageLoading] = useState(true);
   const [namespaces, setNamespaces] = useState<Namespace[]>([]);
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
-  
-  // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Load initial state
   useEffect(() => {
-    setTimeout(() => setIsPageLoading(false), 800);
-
     const storedNamespace = localStorage.getItem("selectedNamespace");
     const storedQuery = localStorage.getItem("query");
-
     if (storedNamespace) setSelectedNamespace(storedNamespace);
-    
-    // If there was a pending query from landing page, execute it
-    if (storedQuery && storedQuery.trim()) {
-        const initialMsg: Message = { id: "init-1", role: "user", content: storedQuery };
-        setMessages([initialMsg]);
-        localStorage.removeItem("query"); // Clear it so it doesn't re-trigger on refresh
-        
-        // We delay slightly to ensure namespaces are loaded or just let the user see the input
-        // But better to auto-submit if possible. 
-        // For now, we pre-fill the input if we don't auto-submit, OR we add it to messages and trigger query.
-        // Let's just setInput(storedQuery) to be safe if namespace isn't ready, 
-        // OR if we have selectedNamespace, trigger it.
-        if (storedNamespace) {
-             handleTriggerQuery(storedQuery, storedNamespace, [initialMsg]);
-        } else {
-             setInput(storedQuery);
-        }
+    if (storedQuery?.trim()) {
+      const initialMsg: Message = { id: "init-1", role: "user", content: storedQuery };
+      setMessages([initialMsg]);
+      localStorage.removeItem("query");
+      if (storedNamespace) {
+        handleTriggerQuery(storedQuery, storedNamespace, [initialMsg]);
+      } else {
+        setInput(storedQuery);
+      }
     }
   }, []);
 
-  // Fetch Namespaces
+  // Fetch namespaces
   useEffect(() => {
     fetchNamespaces(setNamespaces, () => {}, toast);
   }, []);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom
   useEffect(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Handle Namespace Auto-Detect
-  // We pass a dummy 'answer'/'showAnswer' to the hook/adapt it if needed, 
-  // but simpler to just let it detect based on `input` or `messages`?
-  // The hook watches "question". We can pass `input`.
+  // Namespace auto-detect
   useNamespaceDetector({
     namespaces,
     question: input,
     selectedNamespace,
-    answer: "", 
-    showAnswer: false, 
-    onNamespaceDetected: (detectedNs) => {
-        if (detectedNs !== selectedNamespace) {
-            setSelectedNamespace(detectedNs);
-            toast.success(`Auto-switched to ${detectedNs}`);
-        }
-    }
+    answer: "",
+    showAnswer: false,
+    onNamespaceDetected: (ns) => {
+      if (ns !== selectedNamespace) {
+        setSelectedNamespace(ns);
+        toast.success(`Switched to "${ns}"`);
+      }
+    },
   });
 
-  // Toggle Sidebar shortcut
+  // Keyboard shortcut toggle sidebar
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey && event.key.toLowerCase() === "b") {
-        event.preventDefault();
-        setSidebarOpen((prev) => !prev);
+    const handler = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setSidebarOpen((p) => !p);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const handleTriggerQuery = async (queryText: string, namespace: string, currentMessages: Message[]) => {
-      if (!queryText.trim() || !namespace) return;
+  // Auto-resize textarea
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+  };
 
-      setIsLoading(true);
-      const loadingId = "loading-" + Date.now();
-      
-      // Add placeholder bot message
-      setMessages([...currentMessages, { id: loadingId, role: "assistant", content: "", isLoading: true }]);
+  const handleTriggerQuery = async (
+    queryText: string,
+    namespace: string,
+    currentMessages: Message[]
+  ) => {
+    if (!queryText.trim() || !namespace) return;
+    setIsLoading(true);
+    const loadingId = "loading-" + Date.now();
+    setMessages([
+      ...currentMessages,
+      { id: loadingId, role: "assistant", content: "", isLoading: true },
+    ]);
 
-      try {
-        // Extract previous messages for context (exclude loading placeholders)
-        const chatHistory = currentMessages
-          .filter(m => !m.id.startsWith("loading-"))
-          .map(m => ({ role: m.role, content: m.content }));
+    try {
+      const chatHistory = currentMessages
+        .filter((m) => !m.id.startsWith("loading-"))
+        .map((m) => ({ role: m.role, content: m.content }));
 
-        console.log(`📤 Sending query to API:`, {
-          question: queryText,
-          namespace: namespace,
-          chatHistoryLength: chatHistory.length,
-          chatHistory: chatHistory.map(m => `${m.role}: ${m.content.substring(0, 50)}...`)
-        });
+      const res = await fetch("/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: queryText, namespace, chatHistory }),
+      });
 
-        const res = await fetch("/api/query", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              question: queryText, 
-              namespace: namespace,
-              chatHistory: chatHistory,
-            }),
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.message || "Query failed");
-        }
-        
-        const data = await res.json();
-        
-        // Check if response has the expected structure
-        if (!data || typeof data !== 'object') {
-          throw new Error("Invalid response format");
-        }
-        
-        // Handle both success: true format and direct answer format
-        const answer = data.answer || data.message || "";
-        
-        if (!answer || answer.trim() === "") {
-          throw new Error("No answer received from server");
-        }
-        
-        // Update the loading message with the answer
-        setMessages(prev => {
-          const updated = prev.map(m => 
-              m.id === loadingId ? { ...m, content: answer, isLoading: false } : m
-          );
-          // Force React to recognize the change
-          return [...updated];
-        });
-
-      } catch (error) {
-        console.error("Query error:", error);
-        const errorMessage = error instanceof Error ? error.message : "Failed to fetch answer.";
-        toast.error(errorMessage);
-        
-        // Update loading message with error instead of removing it
-        setMessages(prev => prev.map(m => 
-            m.id === loadingId 
-                ? { ...m, content: `Error: ${errorMessage}`, isLoading: false } 
-                : m
-        ));
-      } finally {
-        setIsLoading(false);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Query failed");
       }
+
+      const data = await res.json();
+      const answer = data.answer || data.message || "";
+      if (!answer.trim()) throw new Error("No answer received");
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === loadingId ? { ...m, content: answer, isLoading: false } : m
+        )
+      );
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Failed to fetch answer.";
+      toast.error(msg);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === loadingId ? { ...m, content: `Error: ${msg}`, isLoading: false } : m
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onSubmit = () => {
     if (!selectedNamespace) {
-        toast.error("Please select a namespace.");
-        return;
+      toast.error("Please select a knowledge base first.");
+      return;
     }
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
     const userMsg: Message = { id: Date.now().toString(), role: "user", content: input };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
-    const currentInput = input;
+    const q = input;
     setInput("");
-
-    handleTriggerQuery(currentInput, selectedNamespace, newMessages);
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    handleTriggerQuery(q, selectedNamespace, newMessages);
   };
 
-  if (isPageLoading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black cursor-wait">
-        <LoaderSVG />
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      onSubmit();
+    }
+  };
+
+  const clearConversation = () => {
+    setMessages([]);
+  };
+
+  // ── Sidebar inner ──────────────────────────────────────────────────────────
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full gap-5 p-5">
+      {/* Logo */}
+      <div
+        className="flex items-center gap-2.5 cursor-pointer group"
+        onClick={() => router.push("/")}
+      >
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-600/25 group-hover:shadow-violet-600/40 transition-all duration-200">
+          <Zap className="w-3.5 h-3.5 text-white" />
+        </div>
+        <span className="text-white font-bold text-sm tracking-tight group-hover:text-violet-300 transition-colors">
+          Lexi AI
+        </span>
+        <span className="ml-auto text-[10px] text-neutral-700 font-mono">v2.1</span>
       </div>
-    );
-  }
+
+      {/* New chat */}
+      <button
+        onClick={clearConversation}
+        className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl border border-white/[0.06] bg-white/[0.02] text-neutral-400 text-xs font-medium hover:bg-white/[0.05] hover:text-white hover:border-white/[0.1] transition-all duration-200 cursor-pointer min-h-0 min-w-0"
+      >
+        <Plus className="w-3.5 h-3.5" /> New conversation
+      </button>
+
+      {/* Namespace section */}
+      <div className="space-y-2">
+        <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-[0.15em] flex items-center gap-1.5">
+          <Database className="w-3 h-3" /> Knowledge Base
+        </label>
+        <Select
+          instanceId="namespace-selector"
+          options={namespaces}
+          isSearchable
+          styles={selectStyles}
+          placeholder="Select namespace..."
+          onChange={(e) => {
+            setSelectedNamespace((e as SingleValue<Namespace>)?.value || null);
+            setSidebarOpen(false);
+          }}
+          value={namespaces.find((ns) => ns.value === selectedNamespace)}
+          className="react-select-container"
+          classNamePrefix="react-select"
+        />
+        {selectedNamespace && (
+          <p className="text-[10px] text-violet-400/70 mt-1 ml-1">
+            ✓ {selectedNamespace}
+          </p>
+        )}
+      </div>
+
+      {/* Stats */}
+      {namespaces.length > 0 && (
+        <div className="p-3 rounded-xl border border-white/[0.04] bg-white/[0.02] space-y-1.5">
+          <p className="text-[10px] text-neutral-600 font-semibold uppercase tracking-widest">
+            Available
+          </p>
+          <p className="text-lg font-bold text-white">{namespaces.length}</p>
+          <p className="text-[10px] text-neutral-600">knowledge bases indexed</p>
+        </div>
+      )}
+
+      {/* Footer hint */}
+      <div className="mt-auto pt-4 border-t border-white/[0.04]">
+        <p className="text-[10px] text-neutral-700">
+          Alt+B to toggle sidebar
+        </p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex h-screen w-full bg-black text-white overflow-hidden font-sans selection:bg-neutral-800">
-      <ToastContainer position="top-right" autoClose={3000} theme="dark" />
+    <div className="flex h-screen w-full bg-[#060609] text-white overflow-hidden">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        theme="dark"
+        toastStyle={{
+          background: "#0e0e14",
+          border: "1px solid rgba(255,255,255,0.07)",
+          color: "#e5e5e5",
+          fontSize: "0.8rem",
+        }}
+      />
 
-      {/* Sidebar */}
-      <AnimatePresence mode="popLayout">
+      {/* ── Mobile overlay sidebar ── */}
+      <AnimatePresence>
         {sidebarOpen && (
           <>
-            {/* Mobile Overlay Background */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-40 md:hidden"
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
               onClick={() => setSidebarOpen(false)}
             />
-            
-            {/* Sidebar Content */}
-            <motion.div
-              initial={{ x: "-100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "-100%", opacity: 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 w-80 border-r border-neutral-800 bg-neutral-950 flex flex-col z-50 md:hidden"
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 340, damping: 32 }}
+              className="fixed inset-y-0 left-0 w-72 bg-[#0b0b10] border-r border-white/[0.06] z-50 md:hidden overflow-y-auto"
             >
-              <div className="p-6 flex flex-col h-full gap-6 overflow-y-auto">
-                {/* Close Button - Mobile Only */}
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSidebarOpen(false)}
-                  className="absolute top-4 right-4 bg-neutral-900 p-2 rounded-lg border border-neutral-800 cursor-pointer hover:border-emerald-500/50 transition-colors"
-                >
-                  <X size={20} className="text-white" />
-                </motion.button>
-
-                {/* Header */}
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-3 cursor-pointer group pr-10"
-                  onClick={() => {
-                    router.push("/");
-                  }}
-                >
-                  <motion.div 
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-shadow group-hover:shadow-emerald-500/40 flex-shrink-0"
-                  >
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </motion.div>
-                  <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                    Lexi AI
-                  </h1>
-                </motion.div>
-
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="space-y-4"
-                >
-                  <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Knowledge Base</label>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <NamespaceSelector
-                      namespaces={namespaces}
-                      isLoading={false}
-                      onSelect={(value) => {
-                        setSelectedNamespace(value);
-                        setSidebarOpen(false);
-                      }}
-                      currentSelected={selectedNamespace}
-                    />
-                        </motion.div>
-                    </motion.div>
-
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="mt-auto pt-4 border-t border-neutral-900"
-                  >
-                    <div className="text-xs text-neutral-500">
-                      <motion.span
-                        whileHover={{ scale: 1.05 }}
-                        className="cursor-default"
-                      >
-                        Tap to close
-                      </motion.span>
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
-            </>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/[0.06] text-neutral-500 hover:text-white transition-colors cursor-pointer min-h-0 min-w-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <SidebarContent />
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar - Always Visible on MD+ */}
-      <div className="hidden md:flex h-full border-r border-neutral-800 bg-neutral-950 flex-col w-[300px]">
-        <div className="p-6 flex flex-col h-full gap-6 overflow-y-auto">
-          {/* Header */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 cursor-pointer group"
-            onClick={() => router.push("/")}
+      {/* ── Desktop sidebar ── */}
+      <AnimatePresence mode="wait">
+        {sidebarOpen && (
+          <motion.aside
+            key="desktop-sidebar"
+            initial={{ x: -288, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -288, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 340, damping: 32 }}
+            className="hidden md:flex flex-col w-72 flex-shrink-0 bg-[#0b0b10] border-r border-white/[0.06] overflow-y-auto"
           >
-            <motion.div 
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-shadow group-hover:shadow-emerald-500/40 flex-shrink-0"
-            >
-              <Sparkles className="w-4 h-4 text-white" />
-            </motion.div>
-            <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-              Lexi AI
-            </h1>
-          </motion.div>
+            <SidebarContent />
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-4"
-          >
-            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Knowledge Base</label>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <NamespaceSelector
-                namespaces={namespaces}
-                isLoading={false}
-                onSelect={(value) => setSelectedNamespace(value)}
-                currentSelected={selectedNamespace}
-              />
-            </motion.div>
-          </motion.div>
+      {/* ── Main area ── */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative">
+        {/* Subtle grid bg */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.025]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.15) 1px,transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
 
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-auto pt-4 border-t border-neutral-900"
-          >
-            <div className="text-xs text-neutral-500 flex items-center justify-between">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                className="cursor-default"
+        {/* Top bar */}
+        <div className="relative z-20 flex items-center justify-between px-4 h-12 border-b border-white/[0.04] bg-[#060609]/80 backdrop-blur-sm flex-shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Sidebar toggle */}
+            <button
+              onClick={() => setSidebarOpen((p) => !p)}
+              className="p-1.5 rounded-lg hover:bg-white/[0.06] text-neutral-600 hover:text-white transition-colors cursor-pointer min-h-0 min-w-0"
+              aria-label="Toggle sidebar"
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Mobile menu */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/[0.06] text-neutral-600 hover:text-white transition-colors cursor-pointer min-h-0 min-w-0"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
+            {/* Namespace badge */}
+            {selectedNamespace && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px] font-medium"
               >
-                Cmd + B to toggle
-              </motion.span>
-              <span className="opacity-50">v2.1.0</span>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                {selectedNamespace}
+              </motion.div>
+            )}
+          </div>
 
-      {/* Mobile Menu Toggle Button - Only Show When Sidebar Closed */}
-      {!sidebarOpen && (
-        <motion.button
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="fixed top-4 left-4 z-50 md:hidden bg-neutral-900 p-2 rounded-lg border border-neutral-800 cursor-pointer hover:border-emerald-500/50 transition-colors"
-          onClick={() => setSidebarOpen(true)}
-        >
-          <Menu size={20} className="text-white" />
-        </motion.button>
-      )}
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full relative bg-black overflow-hidden min-w-0">
-        <DotBackground />
-        
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden w-full z-10 p-3 sm:p-4 md:p-8 relative">
-             <div className="max-w-2xl sm:max-w-3xl mx-auto space-y-6 sm:space-y-8 pb-40 sm:pb-32 w-full px-2 sm:px-0">
-                {messages.length === 0 ? (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="h-[50vh] sm:h-[60vh] flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4"
-                    >
-                         <motion.div 
-                            animate={{ 
-                                scale: [1, 1.1, 1],
-                                rotate: [0, 5, -5, 0]
-                            }}
-                            transition={{ 
-                                duration: 4,
-                                repeat: Infinity,
-                                repeatDelay: 2
-                            }}
-                            className="w-12 sm:w-16 h-12 sm:h-16 rounded-2xl bg-neutral-900 flex items-center justify-center border border-neutral-800 shadow-xl mb-2 sm:mb-4 hover:border-emerald-500/50 transition-colors cursor-pointer"
-                            onClick={() => setSidebarOpen(true)}
-                         >
-                            <Sparkles className="w-6 sm:w-8 h-6 sm:h-8 text-emerald-400" />
-                         </motion.div>
-                         <motion.h2 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="text-xl sm:text-2xl font-bold text-neutral-200"
-                         >
-                            How can I help you today?
-                         </motion.h2>
-                         <motion.p 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="text-sm sm:text-base text-neutral-500 max-w-xs sm:max-w-md"
-                         >
-                            Select a namespace on the left and ask any question about your documentation.
-                         </motion.p>
-                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.5 }}
-                            className="mt-4 text-xs text-neutral-600"
-                         >
-                            💡 Tip: Use <code className="bg-neutral-800 px-2 py-1 rounded text-emerald-400">npx lexi-ai</code> to index new docs
-                         </motion.div>
-                    </motion.div>
-                ) : (
-                    messages.map((msg, idx) => (
-                        <motion.div 
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={cn(
-                                "flex w-full",
-                                msg.role === "user" ? "justify-end" : "justify-start"
-                            )}
-                            id={idx.toString()}
-                        >
-                            {msg.role === "user" ? (
-                                <motion.div 
-                                    initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    className="bg-neutral-800 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl rounded-tr-none max-w-[85%] sm:max-w-[80%] min-w-0 shadow-lg hover:bg-neutral-750 transition-colors"
-                                >
-                                    <p className="text-sm sm:text-base leading-relaxed break-words">{msg.content}</p>
-                                </motion.div>
-                            ) : (
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="flex gap-2 sm:gap-4 w-full max-w-full relative z-10"
-                                >
-                                    <motion.div 
-                                        whileHover={{ scale: 1.1 }}
-                                        className="w-6 sm:w-8 h-6 sm:h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex-shrink-0 flex items-center justify-center mt-0 sm:mt-1 relative z-10 shadow-lg shadow-emerald-500/20"
-                                    >
-                                        <Sparkles className="w-3 sm:w-4 h-3 sm:h-4 text-white" />
-                                    </motion.div>
-                                    <motion.div 
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="flex-1 min-w-0 bg-neutral-900/90 rounded-2xl rounded-tl-none px-4 sm:px-5 py-3 sm:py-4 border border-neutral-800 shadow-lg relative z-10 hover:border-emerald-500/30 transition-colors"
-                                    >
-                                        <Answer answer={msg.content || ""} isLoading={!!msg.isLoading} />
-                                    </motion.div>
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    ))
-                )}
-                <div ref={messagesEndRef} />
-             </div>
+          <div className="flex items-center gap-2 text-[10px] text-neutral-700 font-mono">
+            {messages.length > 0 && (
+              <button
+                onClick={clearConversation}
+                className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer min-h-0 min-w-0 text-[10px] font-sans"
+              >
+                Clear
+              </button>
+            )}
+            <span>{messages.filter(m => m.role === "user").length} msgs</span>
+          </div>
         </div>
 
-        {/* Floating Input Area */}
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="absolute bottom-0 left-0 w-full p-3 sm:p-4 md:p-6 bg-gradient-to-t from-black via-black to-transparent z-30"
-        >
-            <div className="max-w-2xl sm:max-w-3xl mx-auto relative">
+        {/* ── Messages ── */}
+        <div className="flex-1 overflow-y-auto relative z-10">
+          <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-6 pb-32">
+            {messages.length === 0 ? (
+              <EmptyState
+                hasNamespace={!!selectedNamespace}
+                onOpenSidebar={() => setSidebarOpen(true)}
+              />
+            ) : (
+              messages.map((msg) => (
                 <motion.div
-                    whileFocus={{ scale: 1.02 }}
-                    transition={{ type: "spring", stiffness: 300 }}
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className={cn(
+                    "flex w-full",
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  )}
                 >
-                    <PlaceholdersAndVanishInput
-                        placeholders={[
-                            "Ask anything about your docs...",
-                            "How do I configure this?",
-                            "Explain the architecture...",
-                        ]}
-                        onChange={(e) => setInput(e.target.value)}
-                        onSubmit={() => onSubmit()}
-                        value={input}
-                        disabled={!selectedNamespace}
-                    />
+                  {msg.role === "user" ? (
+                    <div className="max-w-[82%] px-4 py-3 rounded-2xl rounded-tr-sm bg-gradient-to-br from-violet-600/25 to-indigo-600/20 border border-violet-500/20 text-white text-sm leading-relaxed shadow-lg">
+                      {msg.content}
+                    </div>
+                  ) : (
+                    <div className="flex gap-3 w-full max-w-full">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex-shrink-0 flex items-center justify-center mt-0.5 shadow-lg shadow-violet-600/20">
+                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0 py-1">
+                        {msg.isLoading ? (
+                          <LoaderDots />
+                        ) : (
+                          <Answer answer={msg.content || ""} isLoading={false} />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
-                {!selectedNamespace && (
-                    <motion.p 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-center text-xs text-red-400 mt-2"
-                    >
-                        Please select a namespace to start chatting
-                    </motion.p>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* ── Input area ── */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-[#060609] via-[#060609]/95 to-transparent pt-8 pb-5 px-4">
+          <div className="max-w-3xl mx-auto">
+            <div
+              className={cn(
+                "relative flex items-end gap-2 rounded-2xl border bg-[#0e0e14] shadow-2xl shadow-black/60 transition-all duration-200 p-3",
+                !selectedNamespace
+                  ? "border-white/[0.05] opacity-70"
+                  : "border-white/[0.07] hover:border-violet-500/20 focus-within:border-violet-500/35"
+              )}
+            >
+              <textarea
+                ref={inputRef}
+                rows={1}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  selectedNamespace
+                    ? "Ask anything about your documentation…"
+                    : "Select a knowledge base to start"
+                }
+                disabled={!selectedNamespace || isLoading}
+                className="flex-1 bg-transparent resize-none outline-none text-sm text-white placeholder-neutral-600 leading-relaxed font-sans overflow-y-auto max-h-40 py-1 px-1 disabled:cursor-not-allowed"
+                style={{ minHeight: "24px" }}
+              />
+              <motion.button
+                onClick={onSubmit}
+                disabled={!selectedNamespace || !input.trim() || isLoading}
+                whileHover={selectedNamespace && input.trim() && !isLoading ? { scale: 1.05 } : {}}
+                whileTap={selectedNamespace && input.trim() && !isLoading ? { scale: 0.95 } : {}}
+                className={cn(
+                  "flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer min-h-0 min-w-0",
+                  selectedNamespace && input.trim() && !isLoading
+                    ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-600/25 hover:from-violet-500 hover:to-indigo-500"
+                    : "bg-white/[0.04] text-neutral-700 cursor-not-allowed"
                 )}
+                aria-label="Send message"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </motion.button>
             </div>
-        </motion.div>
+            <p className="text-center text-[10px] text-neutral-700 mt-2.5 font-mono">
+              Enter to send · Shift+Enter for new line
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
